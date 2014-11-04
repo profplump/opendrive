@@ -18,7 +18,7 @@ global $API_VERSION;
 global $API_CHUNK_SIZE;
 $API_BASE = 'https://dev.opendrive.com/api/v1';
 $API_VERSION = 10;
-$API_CHUNK_SIZE = 100 * 1024 * 1024;
+$API_CHUNK_SIZE = 250 * 1024 * 1024;
 
 # PHP version support
 if (!function_exists('curl_file_create')) {
