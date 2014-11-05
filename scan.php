@@ -252,7 +252,7 @@ foreach ($FILES as $file) {
 			if ($DEBUG) {
 				echo 'Adding hash: ' . $path . "\n";
 			}
-			$hash = trim(shell_exec('md5sum ' . escapeshellarg($path) . ' | cut -d " " -f 1 2>/dev/null'));
+			$hash = md5_file($path, false);
 			if (strlen($hash) == 32) {
 				$set_hash->execute(array(':base' => $BASE_LOCAL, ':path' => $file, ':hash' => $hash));
 			} else {
