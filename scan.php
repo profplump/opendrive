@@ -207,6 +207,7 @@ foreach ($FILES as $file) {
 		die('Unable to fetch entry for: ' . $file . "\n");
 	}
 
+
 	# Check the file type
 	if ($row['type'] != $TYPE) {
 		if ($DEBUG) {
@@ -220,9 +221,15 @@ foreach ($FILES as $file) {
 		continue;
 	}
 
+	# Grab the local file stats
+	$stat = @stat($path);
+	if ($stat === false) {
+		echo 'Unable to stat: ' . $path . "\n";
+		continue;
+	}
+
 	# Check the file mtime
-	$mtime = trim(shell_exec('stat -c "%Y" ' . escapeshellarg($path)));
-	if ($row['mtime'] < $mtime) {
+	if ($row['mtime'] < $stat['mtime']) {
 		if ($DEBUG) {
 			echo 'Updating mtime for: ' . $file . "\n";
 		}
@@ -230,14 +237,12 @@ foreach ($FILES as $file) {
 	}
 
 	# Check the file size
-	$size = trim(shell_exec('stat -c "%s" ' . escapeshellarg($path)));
-	if ($row['size'] != $size) {
+	if ($row['size'] != $stat['size']) {
 		if ($DEBUG) {
 			echo 'Updating size for: ' . $file . "\n";
 		}
-		$set_size->execute(array(':base' => $BASE_LOCAL, ':path' => $file, ':size' => $size));
+		$set_size->execute(array(':base' => $BASE_LOCAL, ':path' => $file, ':size' => $stat['size']));
 	}
-	unset($size);
 
 	# Update hashes as needed
 	if ($TYPE != 'folder') {
@@ -247,11 +252,12 @@ foreach ($FILES as $file) {
 			if ($DEBUG) {
 				echo 'Adding hash: ' . $path . "\n";
 			}
-			$hash = trim(shell_exec('md5sum ' . escapeshellarg($path) . ' | cut -d " " -f 1'));
+			$hash = trim(shell_exec('md5sum ' . escapeshellarg($path) . ' | cut -d " " -f 1 2>/dev/null'));
 			if (strlen($hash) == 32) {
 				$set_hash->execute(array(':base' => $BASE_LOCAL, ':path' => $file, ':hash' => $hash));
 			} else {
-				die('Invalid hash (' . $hash . ') for file: ' . $path . "\n");
+				echo 'Unable to hash: ' . $path . "\n";
+				continue;
 			}
 			unset($hash);
 		}

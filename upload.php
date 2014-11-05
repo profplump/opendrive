@@ -92,7 +92,11 @@ while ($row = $files->fetch()) {
 		echo 'Invalid file: ' . $file . "\n";
 		continue;
 	}
-	$stat = stat($file);
+	$stat = @stat($file);
+	if ($stat === false) {
+		echo 'Unable to stat: ' . $file . "\n";
+		continue;
+	}
 
 	# Upload the file
 	if ($DEBUG) {
