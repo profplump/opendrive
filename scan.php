@@ -71,8 +71,8 @@ $dbh = dbOpen();
 
 # Look for files in the DB that no longer exist or have changed types
 $delete = $dbh->prepare('DELETE FROM files WHERE base = :base AND path = :path');
-$missing = $dbh->prepare('SELECT base, path, type FROM files');
-$missing->execute();
+$missing = $dbh->prepare('SELECT base, path, type FROM files WHERE path LIKE :subdir');
+$missing->execute(array(':subdir' => $SUB_DIR . '/%'));
 while ($row = $missing->fetch(PDO::FETCH_ASSOC)) {
 	$trigger = false;
 	$file = $row['base'] . '/' . $row['path'];
@@ -133,6 +133,9 @@ $check_hash = $dbh->prepare('SELECT hash, EXTRACT(EPOCH FROM hash_time) AS hash_
 	'(hash_time IS NULL OR EXTRACT(EPOCH FROM hash_time) < :mtime)');
 $set_hash = $dbh->prepare('UPDATE files SET hash = :hash, hash_time = now() WHERE base = :base AND path = :path');
 foreach ($FILES as $file) {
+	if ($DEBUG) {
+		echo 'Scanning: ' . $file . "\n";
+	}
 
 	# Construct the absolute path
 	$path = $BASE_LOCAL . '/' . $file;
