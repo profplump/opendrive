@@ -9,8 +9,10 @@ if ($_ENV['DEBUG']) {
 	}
 }
 
-# On-disk config
-require_once '.secrets';
+# On-disk config (unless we already have it)
+if (!isset($OD_USER) || !isset($OD_PASSWD) || !isset($DB_STRING)) {
+	@include_once '.secrets';
+}
 
 # Config
 global $API_BASE;
@@ -34,6 +36,13 @@ function dbOpen() {
 	global $DB_STRING;
 	global $DB_USER;
 	global $DB_PASSWD;
+
+	# Sanity check
+	if (!isset($DB_STRING)) {
+		die("No DBN in available\n");
+	}
+
+	# Connect
 	try {
 		$dbh = new PDO($DB_STRING, $DB_USER, $DB_PASSWD);
 	} catch (PDOException $e) {
@@ -157,6 +166,13 @@ function login() {
 	global $API_VERSION;
 	global $OD_USER;
 	global $OD_PASSWD;
+
+	# Sanity check
+	if (!isset($OD_USER) || !isset($OD_PASSWD)) {
+		die("No OpenDrive credentials available\n");
+	}
+
+	# Login
 	$data = array(
 		'username' 	=> $OD_USER,
 		'passwd'	=> $OD_PASSWD,
