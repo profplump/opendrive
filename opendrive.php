@@ -95,7 +95,7 @@ function curlPostRaw($url, $data, $header = NULL) {
 	if ($DEBUG >= 2) {
 		echo 'Request: ' . $url . "\n";
 		print_r($data);
-		echo "\n";
+		echo "\n\n";
 	}
 	$response = curl_exec($ch);
 
