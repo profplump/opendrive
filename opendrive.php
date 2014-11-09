@@ -97,8 +97,11 @@ function curlPostRaw($url, $data, $header = NULL) {
 
 	# Return
 	if ($DEBUG >= 4) {
-		echo "Response:\n";
+		echo "Response headers:\n";
+		print_r(curl_getinfo($ch));
+		echo "Response body:\n";
 		print_r($response);
+		echo "\n\n======================================\n\n\n";
 	}
 	return($response);
 }
