@@ -284,6 +284,7 @@ unset($set_hash);
 
 # Update priorities
 $priority = $dbh->prepare('UPDATE files SET priority = :priority WHERE path LIKE :path');
+$priority->execute(array(':priority' => 250,	':path' => 'Pictures/%'));
 $priority->execute(array(':priority' => 100,	':path' => 'Movies/%'));
 $priority->execute(array(':priority' => 50,	':path' => 'iTunes/%'));
 $priority->execute(array(':priority' => -50,	':path' => 'Backups/%'));
