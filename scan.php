@@ -189,6 +189,8 @@ foreach ($FILES as $file) {
 	} else if ($EXT == 'fake' || $EXT == 'txt' || $EXT == 'json' ||
 		$EXT == 'bup' || $EXT == 'ifo') {
 			$TYPE = 'metadata';
+	} else if ($EXT == '' && preg_match('/\.sparsebundle\/bands\/\w+$/i', $file)) {
+		$TYPE = 'disk';
 	}
 	if ($TYPE == 'other') {
 		die('Unknown file type: ' . $path . ': ' . $NAME . '|' . $EXT . "\n");
@@ -283,13 +285,17 @@ unset($check_hash);
 unset($set_hash);
 
 # Update priorities
+$paths = $dbh->prepare('SELECT path, priority FROM paths');
 $priority = $dbh->prepare('UPDATE files SET priority = :priority WHERE path LIKE :path');
-$priority->execute(array(':priority' => 250,	':path' => 'Pictures/%'));
-$priority->execute(array(':priority' => 100,	':path' => 'Movies/%'));
-$priority->execute(array(':priority' => 50,	':path' => 'iTunes/%'));
-$priority->execute(array(':priority' => -50,	':path' => 'Backups/%'));
-$priority->execute(array(':priority' => -100,	':path' => 'TV/%'));
+$paths->execute();
+while ($row = $paths->fetch(PDO::FETCH_ASSOC)) {
+	$priority->execute(array(':priority' => $row['priority'], ':path' => $row['path'] . '/%'));
+	if ($DEBUG) {
+		echo 'Updated ' . $priority->rowCount() . ' rows from ' . $row['path'] . ' with priority ' . $row['priority'] . "\n";
+	}
+}
 unset($priority);
+unset($paths);
 
 # If remote operations are enabled
 if ($REMOTE) {
