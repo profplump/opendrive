@@ -37,6 +37,9 @@ $dbh = dbOpen();
 
 # Find our scan paths
 $paths = NULL;
+$priority = $dbh->prepare('UPDATE files SET priority = :priority WHERE base = :base AND path LIKE :path');
+$scan = $dbh->prepare('UPDATE paths SET last_scan = now() WHERE base = :base AND path = :path');
+$scan_remote = $dbh->prepare('UPDATE paths SET remote_last_scan = now() WHERE base = :base AND path = :path');
 if (!$PATH) {
 	$paths = $dbh->prepare('SELECT base, path, priority, scan_age FROM paths');
 	$paths->execute();
@@ -300,13 +303,14 @@ while ($pathsRow = $paths->fetch(PDO::FETCH_ASSOC)) {
 	unset($set_hash);
 
 	# Update priorities
-	$priority = $dbh->prepare('UPDATE files SET priority = :priority WHERE base = :base AND path LIKE :path');
 	$priority->execute(array(':priority' => $pathsRow['priority'], ':base' => $BASE, ':path' => $PATH_LIKE));
 	if ($DEBUG) {
 		echo 'Updated ' . $priority->rowCount() . ' rows from ' . $PATH . ' with priority ' . $pathsRow['priority'] . "\n";
 	}
-	unset($priority);
 	
+	# Update the scan time
+	$scan->execute(array(':base' => $BASE, ':path' => $PATH));
+
 	# If remote operations are enabled
 	if ($REMOTE) {
 
@@ -354,8 +358,14 @@ while ($pathsRow = $paths->fetch(PDO::FETCH_ASSOC)) {
 		# Logout of OpenDrive
 		logout($session);
 		unset($session);
+
+		# Update the remote scan time
+		$scan_remote->execute(array(':base' => $BASE, ':path' => $PATH));
 	}
 }
+unset($priority);
+unset($scan);
+unset($scan_remote);
 unset($pathsRow);
 unset($paths);
 
