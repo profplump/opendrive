@@ -37,12 +37,13 @@ $dbh = dbOpen();
 
 # Find our scan paths
 $paths = NULL;
-if ($PATH) {
-	$paths = $dbh->prepare('SELECT base, path FROM paths');
+if (!$PATH) {
+	$paths = $dbh->prepare('SELECT base, path, priority, scan_age FROM paths');
+	$paths->execute();
 } else {
-	$paths = $dbh->prepare('SELECT base, path FROM paths WHERE path LIKE :path');
+	$paths = $dbh->prepare('SELECT base, path, priority, scan_age FROM paths WHERE path LIKE :path');
+	$paths->execute(array(':path' => $PATH));
 }
-$paths->execute(array(':path' => $PATH));
 while ($pathsRow = $paths->fetch(PDO::FETCH_ASSOC)) {
 
 	# Grab our globals
@@ -102,16 +103,21 @@ while ($pathsRow = $paths->fetch(PDO::FETCH_ASSOC)) {
 	# Grab the file list
 	$FILES = array();
 	$compAge = time() - ($MIN_AGE * 86400);
-	$fsh = new RecursiveIteratorIterator(
-		new RecursiveDirectoryIterator(
-			$local_path,
-			FilesystemIterator::KEY_AS_PATHNAME |
-			FilesystemIterator::CURRENT_AS_FILEINFO |
-			FilesystemIterator::SKIP_DOTS |
-			FilesystemIterator::UNIX_PATHS
-		),
-		RecursiveIteratorIterator::SELF_FIRST
-	);
+	$fsh = NULL;
+	try {
+		$fsh = new RecursiveIteratorIterator(
+			new RecursiveDirectoryIterator(
+				$LOCAL,
+				FilesystemIterator::KEY_AS_PATHNAME |
+				FilesystemIterator::CURRENT_AS_FILEINFO |
+				FilesystemIterator::SKIP_DOTS |
+				FilesystemIterator::UNIX_PATHS
+			),
+			RecursiveIteratorIterator::SELF_FIRST
+		);
+	} catch (Exception $e) {
+		die('Invalid filesystem path: ' . $LOCAL . "\n");
+	}
 	foreach ($fsh as $path => $file) {
 
 		# Ignore anything that isn't a file and isn't a directory
@@ -148,16 +154,15 @@ while ($pathsRow = $paths->fetch(PDO::FETCH_ASSOC)) {
 
 		# Construct the absolute path
 		$path = $file->getPathname();
-		$shortPath = substr($path, length($BASE) + 1);
+		$shortPath = substr($path, strlen($BASE) + 1);
 		if ($DEBUG) {
 			echo 'Scanning: ' . $path . "\n";
 		}
 
 		# Pick a file type
-		$parts = $file->getPathInfo();
-		$ext = strtolower($parts['extension']);
-		$name = strtolower($parts['filename']);
-		unset($parts);
+		$ext = $file->getExtension();
+		$name = strtolower($file->getBasename('.' . $ext));
+		$ext = strtolower($ext);
 
 		$type = 'other';
 		if (preg_match('/\/\.git(\/.*)?$/', $shortPath)) {
@@ -169,7 +174,7 @@ while ($pathsRow = $paths->fetch(PDO::FETCH_ASSOC)) {
 		} else if ($ext == 'tmp' || $ext == 'gitignore' || $ext == 'ds_store' ||
 			preg_match('/^\.smbdelete/', $name) || preg_match('/\.mkv\.\w+$/', $shortPath)) {
 				$type = 'ignored';
-		} else if (preg_match('/^iTunes\/Album Artwork\/Cache/', $shortPath)) {
+		} else if (preg_match('/^iTunes\/Album Artwork\/Cache/', $shortPath) || $shortPath == 'iTunes/sentinel') {
 			$type = 'ignored';
 		} else if ($file->isDir()) {
 			$type = 'folder';
@@ -189,7 +194,7 @@ while ($pathsRow = $paths->fetch(PDO::FETCH_ASSOC)) {
 		} else if ($ext == 'gz' || $ext == 'zip' || $ext == 'xz') {
 			$type = 'archive';
 		} else if ($ext == 'itc' || $ext == 'itl' || $ext == 'strings' || $ext == 'itdb' ||
-			$ext == 'plist' || $ext == 'ipa' || $ext == 'ini') {
+			$ext == 'xml' || $ext == 'plist' || $ext == 'ipa' || $ext == 'ini') {
 				$type = 'database';
 		} else if ($ext == 'clip' || $ext == 'riff' || $ext == 'nfo') {
 			$type = 'metadata';
@@ -202,8 +207,12 @@ while ($pathsRow = $paths->fetch(PDO::FETCH_ASSOC)) {
 		} else if ($ext == 'fake' || $ext == 'txt' || $ext == 'json' ||
 			$ext == 'bup' || $ext == 'ifo') {
 				$type = 'metadata';
-		} else if ($ext == '' && preg_match('/\.sparsebundle\/bands\/\w+$/i', $shortPath)) {
-			$type = 'disk';
+		} else if (preg_match('/\.sparsebundle\//i', $shortPath)) {
+			if ($ext == 'bckup' || $ext == 'plist') {
+				$type = 'disk';
+			} else if (preg_match('/\.sparsebundle\/bands\/\w+$/i', $shortPath)) {
+				$type = 'disk';
+			}
 		}
 		if ($type == 'other') {
 			die('Unknown file type: ' . $path . ': ' . $name . '|' . $ext . "\n");
@@ -247,7 +256,7 @@ while ($pathsRow = $paths->fetch(PDO::FETCH_ASSOC)) {
 		}
 
 		# Check the file size
-		if ($row->['size'] != $file->getSize()) {
+		if ($row['size'] != $file->getSize()) {
 			if ($DEBUG) {
 				echo 'Updating size for: ' . $file . "\n";
 			}
@@ -291,10 +300,10 @@ while ($pathsRow = $paths->fetch(PDO::FETCH_ASSOC)) {
 	unset($set_hash);
 
 	# Update priorities
-	$priority = $dbh->prepare('UPDATE files SET priority = :priority WHERE path LIKE :path');
-	$priority->execute(array(':priority' => $row['priority'], ':path' => $PATH_LIKE));
+	$priority = $dbh->prepare('UPDATE files SET priority = :priority WHERE base = :base AND path LIKE :path');
+	$priority->execute(array(':priority' => $pathsRow['priority'], ':base' => $BASE, ':path' => $PATH_LIKE));
 	if ($DEBUG) {
-		echo 'Updated ' . $priority->rowCount() . ' rows from ' . $PATH . ' with priority ' . $row['priority'] . "\n";
+		echo 'Updated ' . $priority->rowCount() . ' rows from ' . $PATH . ' with priority ' . $pathsRow['priority'] . "\n";
 	}
 	unset($priority);
 	
