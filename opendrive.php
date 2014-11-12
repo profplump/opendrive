@@ -406,6 +406,10 @@ function fileUpload($session, $path, $file) {
 
 	# Upload
 	$offset = 0;
+	if (count($files) < 1) {
+		echo 'No segments to upload: ' . $file . "\n";
+		return false;
+	}
 	foreach ($files as $chunk) {
 		if ($DEBUG > 1) {
 			echo 'Uploading chunk: ' . $chunk . "\n";
