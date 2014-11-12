@@ -13,9 +13,9 @@ require_once 'opendrive.php';
 # Command-line parameters
 global $argc;
 global $argv;
-$PATH = '';
+$LIMIT_PATH = '';
 if (($argc > 1) && (strlen($argv[1]) > 0)) {
-	$PATH = trim($argv[1]);
+	$LIMIT_PATH = trim($argv[1]);
 }
 
 # Allow local-only scanning
@@ -39,13 +39,12 @@ $dbh = dbOpen();
 $paths = NULL;
 $priority = $dbh->prepare('UPDATE files SET priority = :priority WHERE base = :base AND path LIKE :path');
 $scan = $dbh->prepare('UPDATE paths SET last_scan = now() WHERE base = :base AND path = :path');
-$scan_remote = $dbh->prepare('UPDATE paths SET remote_last_scan = now() WHERE base = :base AND path = :path');
-if (!$PATH) {
-	$paths = $dbh->prepare('SELECT base, path, priority, scan_age FROM paths');
-	$paths->execute();
+if (!$LIMIT_PATH) {
+	$paths = $dbh->prepare('SELECT base, path, priority, min_age FROM paths WHERE last_scan < now() - scan_age');
 } else {
-	$paths = $dbh->prepare('SELECT base, path, priority, scan_age FROM paths WHERE path LIKE :path');
-	$paths->execute(array(':path' => $PATH));
+	$paths = $dbh->prepare('SELECT base, path, priority, min_age FROM paths WHERE last_scan < now() - scan_age' .
+		' AND path LIKE :path');
+	$paths->execute(array(':path' => $LIMIT_PATH));
 }
 while ($pathsRow = $paths->fetch(PDO::FETCH_ASSOC)) {
 
@@ -53,7 +52,7 @@ while ($pathsRow = $paths->fetch(PDO::FETCH_ASSOC)) {
 	$BASE = $pathsRow['base'];
 	$PATH = $pathsRow['path'];
 	$PATH_LIKE = $PATH . '/%';
-	$MIN_AGE = $pathsRow['scan_age'];
+	$MIN_AGE = $pathsRow['min_age'];
 	$LOCAL = $BASE . '/' . $PATH;
 
 	# Sanity check
@@ -311,15 +310,48 @@ while ($pathsRow = $paths->fetch(PDO::FETCH_ASSOC)) {
 	# Update the scan time
 	$scan->execute(array(':base' => $BASE, ':path' => $PATH));
 
-	# If remote operations are enabled
-	if ($REMOTE) {
+	unset($BASE);
+	unset($PATH);
+	unset($PATH_LIKE);
+	unset($MIN_AGE);
+	unset($LOCAL);
+}
+unset($priority);
+unset($scan);
+unset($pathsRow);
+unset($paths);
 
-		# Log in to OpenDrive
-		require_once 'opendrive.php';
-		$session = login();
+# If remote operations are enabled
+if ($REMOTE) {
+
+	# Log in to OpenDrive
+	require_once 'opendrive.php';
+	$session = login();
+
+	# Find our scan paths
+	$paths = NULL;
+	$scan = $dbh->prepare('UPDATE paths SET remote_last_scan = now() WHERE base = :base AND path = :path');
+	if (!$LIMIT_PATH) {
+		$paths = $dbh->prepare('SELECT base, path, priority, min_age FROM paths' .
+			' WHERE remote_last_scan < now() - remote_scan_age');
+	} else {
+		$paths = $dbh->prepare('SELECT base, path, priority, min_age FROM paths' .
+			' WHERE remote_last_scan < now() - remote_scan_age' .
+			' AND path LIKE :path');
+		$paths->execute(array(':path' => $LIMIT_PATH));
+	}
+	while ($pathsRow = $paths->fetch(PDO::FETCH_ASSOC)) {
+
+		# Grab our globals
+		$BASE = $pathsRow['base'];
+		$PATH = $pathsRow['path'];
+		$PATH_LIKE = $PATH . '/%';
+		if ($DEBUG) {
+			echo 'Remote scan for: ' . $PATH . "\n";
+		}
 
 		# Validate the existence, type and size of all files we think on the remote system
-		$select = $dbh->prepare('SELECT base, path, type, size FROM files WHERE remote_mtime IS NOT NULL AND path LIKE :path');
+		$select = $dbh->prepare('SELECT path, type, size FROM files WHERE remote_mtime IS NOT NULL AND path LIKE :path');
 		$clear = $dbh->prepare('UPDATE files SET remote_mtime = NULL, remote_hash = NULL WHERE base = :base AND path = :path');
 		$select->execute(array(':path' => $PATH_LIKE));
 		while ($row = $select->fetch(PDO::FETCH_ASSOC)) {
@@ -354,18 +386,21 @@ while ($pathsRow = $paths->fetch(PDO::FETCH_ASSOC)) {
 		}
 		unset($select);
 		unset($clear);
-
-		# Logout of OpenDrive
-		logout($session);
-		unset($session);
+		unset($row);
 
 		# Update the remote scan time
-		$scan_remote->execute(array(':base' => $BASE, ':path' => $PATH));
+		$scan->execute(array(':base' => $BASE, ':path' => $PATH));
+
+		# Cleanup
+		unset($PATH);
+		unset($PATH_LIKE);
 	}
+
+	# Logout of OpenDrive
+	logout($session);
+	unset($session);
 }
-unset($priority);
 unset($scan);
-unset($scan_remote);
 unset($pathsRow);
 unset($paths);
 
