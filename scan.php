@@ -144,7 +144,8 @@ while ($pathsRow = $paths->fetch(PDO::FETCH_ASSOC)) {
 	# Loop through all the files we found
 	$select = $dbh->prepare('SELECT base, path, type FROM files WHERE base = :base AND path = :path');
 	$insert = $dbh->prepare('INSERT INTO files (base, path, type, mtime) VALUES (:base, :path, :type, now())');
-	$check = $dbh->prepare('SELECT type, size, EXTRACT(EPOCH FROM mtime) AS mtime FROM files WHERE base = :base AND path = :path');
+	$check = $dbh->prepare('SELECT type, size, EXTRACT(EPOCH FROM mtime) AS mtime FROM files' .
+		' WHERE base = :base AND path = :path');
 	$set_mtime = $dbh->prepare('UPDATE files SET mtime = now() WHERE base = :base AND path = :path');
 	$set_size = $dbh->prepare('UPDATE files SET size = :size WHERE base = :base AND path = :path');
 	$set_type = $dbh->prepare('UPDATE files SET type = :type WHERE base = :base AND path = :path');
@@ -213,6 +214,8 @@ while ($pathsRow = $paths->fetch(PDO::FETCH_ASSOC)) {
 			if ($ext == 'bckup' || $ext == 'plist') {
 				$type = 'disk';
 			} else if (preg_match('/\.sparsebundle\/bands\/\w+$/i', $shortPath)) {
+				$type = 'disk';
+			} else if (preg_match('/\.sparsebundle\/token$/i', $shortPath)) {
 				$type = 'disk';
 			}
 		}
@@ -326,7 +329,7 @@ if ($REMOTE) {
 
 	# Log in to OpenDrive
 	require_once 'opendrive.php';
-	$session = login();
+	$session = NULL;
 
 	# Find our scan paths
 	$paths = NULL;
@@ -348,6 +351,11 @@ if ($REMOTE) {
 		$PATH_LIKE = $PATH . '/%';
 		if ($DEBUG) {
 			echo 'Remote scan for: ' . $PATH . "\n";
+		}
+
+		# Log in to OpenDrive as needed
+		if (!$session) {
+			$session = login();
 		}
 
 		# Validate the existence, type and size of all files we think on the remote system
@@ -396,8 +404,10 @@ if ($REMOTE) {
 		unset($PATH_LIKE);
 	}
 
-	# Logout of OpenDrive
-	logout($session);
+	# Logout of OpenDrive as needed
+	if ($session) {
+		logout($session);
+	}
 	unset($session);
 }
 unset($scan);
