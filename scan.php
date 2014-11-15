@@ -41,6 +41,7 @@ $priority = $dbh->prepare('UPDATE files SET priority = :priority WHERE base = :b
 $scan = $dbh->prepare('UPDATE paths SET last_scan = now() WHERE base = :base AND path = :path');
 if (!$LIMIT_PATH) {
 	$paths = $dbh->prepare('SELECT base, path, priority, min_age FROM paths WHERE last_scan < now() - scan_age');
+	$paths->execute();
 } else {
 	$paths = $dbh->prepare('SELECT base, path, priority, min_age FROM paths WHERE last_scan < now() - scan_age' .
 		' AND path LIKE :path');
@@ -54,6 +55,11 @@ while ($pathsRow = $paths->fetch(PDO::FETCH_ASSOC)) {
 	$PATH_LIKE = $PATH . '/%';
 	$MIN_AGE = $pathsRow['min_age'];
 	$LOCAL = $BASE . '/' . $PATH;
+
+	# Debug
+	if ($DEBUG) {
+		echo 'Scanning path: ' . $LOCAL . "\n";
+	}
 
 	# Sanity check
 	if (!@is_dir($LOCAL) | !@is_readable($LOCAL)) {
