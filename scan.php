@@ -26,10 +26,10 @@ if (isset($_ENV['REMOTE'])) {
 	}
 }
 
-# Delete only if specified
-$DELETE = false;
-if ($_ENV['DELETE']) {
-	$DELETE = true;
+# Delete unless disabled
+$DELETE = true;
+if (isset($_ENV['DELETE']) && !$_ENV['DELETE']) {
+	$DELETE = false;
 }
 
 # Open the DB connection
