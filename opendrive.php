@@ -371,7 +371,14 @@ function fileUpload($session, $path, $file) {
 		}
 
 		# Create a temporary directory
-		$tempDir = trim(shell_exec('mktemp -d'));
+		$tempDir = trim(
+			shell_exec(
+				'mktemp' .
+				' -d' .
+				' --tmpdir=' . escapeshellarg(sys_get_temp_dir()) .
+				' ' . escapeshellarg(basename($file)) . '.XXXXXXXX'
+			)
+		);
 		if (!is_dir($tempDir)) {
 			echo "Unable to create temp directory\n";
 			return false;
