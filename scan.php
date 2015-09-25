@@ -211,7 +211,8 @@ while ($pathsRow = $paths->fetch(PDO::FETCH_ASSOC)) {
 			$name == 'more_number_formats' || $name == 'no_quality_checks' ||
 			$name == 'filler' || $name == 'search_name' || $ext == 'disabled' ||
 			$name == 'must_match' || $ext == 'fakeshow' || $ext == 'filler' ||
-			$name == 'excludes' || $name == 'search_by_date' || $ext == 'twopart') { 
+			$name == 'excludes' || $name == 'search_by_date' || $ext == 'twopart' ||
+			$name == 'url') { 
 				$type = 'metadata';
 		} else if ($ext == 'fake' || $ext == 'txt' || $ext == 'json' ||
 			$ext == 'bup' || $ext == 'ifo') {
