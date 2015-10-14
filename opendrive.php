@@ -16,10 +16,8 @@ if (!isset($OD_USER) || !isset($OD_PASSWD) || !isset($DB_STRING)) {
 
 # Config
 global $API_BASE;
-global $API_VERSION;
 global $API_CHUNK_SIZE;
 $API_BASE = 'https://dev.opendrive.com/api/v1';
-$API_VERSION = 10;
 $API_CHUNK_SIZE = 250 * 1024 * 1024;
 
 # PHP version support
@@ -163,7 +161,6 @@ function curlGet($url) {
 
 # Login to OD and return the SessionID
 function login() {
-	global $API_VERSION;
 	global $OD_USER;
 	global $OD_PASSWD;
 
@@ -176,7 +173,6 @@ function login() {
 	$data = array(
 		'username' 	=> $OD_USER,
 		'passwd'	=> $OD_PASSWD,
-		'version'	=> $API_VERSION
 	);
 	$response = curlPost('/session/login.json', $data);
 
