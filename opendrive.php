@@ -272,6 +272,26 @@ function rmFolder($session, $path) {
 	return false;
 }
 
+# Delete a file
+function rmFile($session, $path) {
+	$id = fileID($session, $path);
+	if ($id) {
+		return false;
+	}
+
+	$data = array(
+		'session_id'	=> $session,
+		'folder_id'	=> $id
+	);
+	$response = curlPost('/file/trash.json', $data);
+
+	# Check the result
+	if ($response['DirUpdateTime']) {
+		return true;
+	}
+	return false;
+}
+
 # Return the ID of a file
 function fileID($session, $path) {
 	$data = array(

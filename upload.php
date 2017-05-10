@@ -98,6 +98,12 @@ while ($row = $files->fetch()) {
 		continue;
 	}
 
+	# Delete the file if it already exists
+	if (fileID($session, $row['path'])) {
+		echo 'Replacing file: ' . $row['path'] . "\n";
+		rmFile($session, $row['path']);
+	}
+
 	# Upload the file
 	if ($DEBUG) {
 		echo 'Uploading file (' . $stat['size'] . ' bytes): ' . $row['path'] . "\n";
