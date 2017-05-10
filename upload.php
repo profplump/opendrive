@@ -75,6 +75,8 @@ while ($row = $folders->fetch()) {
 	}
 	if (folderID($session, $row['path']) || mkFolder($session, $row['path'])) {
 		$update->execute(array(':base' => $row['base'], ':path' => $row['path']));
+	} else {
+		echo 'Unable to create folder: ' . $row['path'] . "\n";
 	}
 }
 
@@ -112,6 +114,8 @@ while ($row = $files->fetch()) {
 	if ($result !== false && $result == $stat['size']) {
 		$uploaded += $result;
 		$update->execute(array(':base' => $row['base'], ':path' => $row['path']));
+	} else {
+		echo 'Unable to upload file: ' . $row['path'] . "\n";
 	}
 
 	# Bail if we exceed the byte limit
