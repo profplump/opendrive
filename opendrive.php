@@ -275,13 +275,13 @@ function rmFolder($session, $path) {
 # Delete a file
 function rmFile($session, $path) {
 	$id = fileID($session, $path);
-	if ($id) {
+	if (!$id) {
 		return false;
 	}
 
 	$data = array(
 		'session_id'	=> $session,
-		'folder_id'	=> $id
+		'file_id'	=> $id
 	);
 	$response = curlPost('/file/trash.json', $data);
 
