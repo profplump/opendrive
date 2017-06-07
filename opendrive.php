@@ -247,7 +247,7 @@ function mkFolder($session, $path) {
 
 	# Check the result
 	if ($response['FolderId']) {
-		return($response['FolderId']);
+		return true;
 	}
 	return false;
 }
