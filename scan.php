@@ -213,7 +213,7 @@ while ($pathsRow = $paths->fetch(PDO::FETCH_ASSOC)) {
 			$name == 'must_match' || $ext == 'fakeshow' || $ext == 'filler' ||
 			$name == 'excludes' || $name == 'search_by_date' || $ext == 'twopart' ||
 			$name == 'url' || $ext == 'meta' || ($name == 'rules' && $ext == 'pm') ||
-			$name == 'update') { 
+			$name == 'update' || $name == 'source_excludes') { 
 				$type = 'metadata';
 		} else if ($ext == 'fake' || $ext == 'txt' || $ext == 'json' ||
 			$ext == 'bup' || $ext == 'ifo') {
