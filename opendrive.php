@@ -53,7 +53,7 @@ function dbOpen() {
 function pathCleanup($path) {
 	$path = preg_replace('/\/+$/', '', $path);
 	$path = preg_replace('/^\/+/', '', $path);
-	$path = preg_replace('/\?/g', '_', $path);
+	$path = preg_replace('/\?/', '_', $path);
 	return $path;
 }
 
