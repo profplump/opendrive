@@ -180,6 +180,8 @@ while ($pathsRow = $paths->fetch(PDO::FETCH_ASSOC)) {
 			$type = 'ignored';
 		} else if ($ext == 'lastfindrecode' || $name == 'placeholder' || $ext == 'plexignore') {
 			$type = 'ignored';
+		} else if ($ext == 'numbers') {
+			$type = 'ignored';
 		} else if ($ext == 'tmp' || $ext == 'gitignore' || $ext == 'ds_store' ||
 			preg_match('/^\.smbdelete/', $name) || preg_match('/\.mkv\.\w+$/', $shortPath)) {
 				$type = 'ignored';
